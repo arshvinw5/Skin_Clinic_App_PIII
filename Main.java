@@ -1,9 +1,12 @@
 package Skin_Clinic_App;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 
 public class Main {
    // to hold dermatologists
@@ -17,6 +20,9 @@ public class Main {
 
    // to get appointment by NIC
    private static HashMap<String, ArrayList<Appointment>> appointmentsByNIC = new HashMap<>();
+
+   // Map to store existing appointments for each dermatologist, date, and time
+   private static final Set<String> bookedSlots = new HashSet<>();
 
    private static Scanner scanner = new Scanner(System.in);
    private static int appointmentCounter = 1;
@@ -56,13 +62,37 @@ public class Main {
    }
 
    private static void initializeDermatologistData() {
-      dermatologists.add(new Dermatologist("123456789V", "Dr Max", "maxWills@gmail.com", "0775829068",
-            List.of("Monday 10.00am - 01.00pm", "Wednesday 02.00pm - 05.00pm", "Friday: 04:00pm - 08:00pm",
-                  "Saturday: 09:00am - 01:00pm")));
+      // dermatologists.add(new Dermatologist("123456789V", "Dr Max",
+      // "maxWills@gmail.com", "0775829068",
+      // List.of("Monday 10.00am - 01.00pm", "Wednesday 02.00pm - 05.00pm", "Friday:
+      // 04:00pm - 08:00pm",
+      // "Saturday: 09:00am - 01:00pm")));
+      // treatments.add(new Treatment("Acne Treatment", 2750.00));
+      // treatments.add(new Treatment("Skin Whitening", 7650.00));
+      // treatments.add(new Treatment("Mole Removal", 3850.00));
+      // treatments.add(new Treatment("Laser Treatment", 12500.00));
+
+      // timeFormatter: a DateTimeFormatter to format time values according to a
+      // specified pattern as hh:mma for "10:00AM"
+      DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mma");
+      List<String> slots = new ArrayList<>();
+
+      // Generate 15-minute slots for each day and time range
+      slots.addAll(TimeSlotGenerator.generateTimeSlots("Monday 10:00AM - 01:00PM", timeFormatter));
+      slots.addAll(TimeSlotGenerator.generateTimeSlots("Wednesday 02:00PM - 05:00PM", timeFormatter));
+      slots.addAll(TimeSlotGenerator.generateTimeSlots("Friday 04:00PM - 08:00PM", timeFormatter));
+      slots.addAll(TimeSlotGenerator.generateTimeSlots("Saturday 09:00AM - 01:00PM", timeFormatter));
+
+      // Add dermatologist with 15-minute time slots
+      dermatologists.add(new Dermatologist("123456789V", "Dr Max", "maxWills@gmail.com", "0775829068", slots));
+      dermatologists.add(new Dermatologist("123456789V", "Dr Wimal", "wimalWaduge@gmail.com", "0775123456", slots));
+
+      // Add treatments
       treatments.add(new Treatment("Acne Treatment", 2750.00));
       treatments.add(new Treatment("Skin Whitening", 7650.00));
       treatments.add(new Treatment("Mole Removal", 3850.00));
       treatments.add(new Treatment("Laser Treatment", 12500.00));
+
    }
 
    // booking appointments function
@@ -109,25 +139,20 @@ public class Main {
       Dermatologist selectedDermatologist = dermatologists.get(dermatologistChoice - 1);
 
       List<String> availableSchedules = selectedDermatologist.getSchedule();
-      System.out.println("Available Schedule");
 
-      // to display each schedule option with a number
+      System.out.println("Available Schedule:");
       for (int i = 0; i < availableSchedules.size(); i++) {
          System.out.println((i + 1) + ". " + availableSchedules.get(i));
       }
 
-      // to loop out to select the available schedule
       int scheduleChoice = -1;
       while (scheduleChoice < 1 || scheduleChoice > availableSchedules.size()) {
          try {
-            System.out.println("Select dermatologists schedule by number :");
+            System.out.println("Select dermatologist's schedule by number:");
             scheduleChoice = Integer.parseInt(scanner.nextLine().trim());
-
-         } catch (NullPointerException e) {
-            System.out.println("Invalid input! Please enter a valid number");
-
+         } catch (NumberFormatException e) {
+            System.out.println("Invalid input! Please enter a valid number.");
          }
-
       }
 
       // REtrieve selected schedule details
@@ -150,6 +175,29 @@ public class Main {
 
       // System.out.println("Enter appointment time (Ex : 10.00am) :");
       // String time = scanner.nextLine().trim();
+
+      // Create a unique key for this appointment slot
+      String appointmentKey = selectedDermatologist.getName() + "|" + date + "|" + timeRange;
+
+      // Check if the slot is already booked
+      if (bookedSlots.contains(appointmentKey)) {
+         System.out.println("This slot has already been booked. Please select a different schedule.");
+         return;
+      }
+
+      // If not booked, proceed with booking and add to bookedSlots
+      bookedSlots.add(appointmentKey);
+
+      System.out
+            .println("Registration fee is LKR " + Appointment.getRegFee() + ". Please confirm payment (Y/N):");
+      String confirmation = scanner.nextLine().trim().toUpperCase();
+
+      if (!confirmation.equals("Y")) {
+         System.out.println("Appointment not booked. Registration fee not confirmed.");
+         return;
+      }
+
+      availableSchedules.remove(scheduleChoice - 1);
 
       // creating a new appointment object
       Appointment newAppointment = new Appointment(appointmentCounter++, patient, selectedDermatologist, date,
@@ -254,6 +302,16 @@ public class Main {
       // access selected appointment's Dermatologist through the appointment class to
       // update it
       Dermatologist dermatologist = appointmentToUpdate.getDermatologist();
+
+      String oldDate = appointmentToUpdate.getDate();
+      String oldTimeRange = appointmentToUpdate.getTime();
+      String oldSchedule = oldDate + " " + oldTimeRange;
+
+      // add the old schedule back to dermatologist schedule list again
+      if (!dermatologist.getSchedule().contains(oldSchedule)) {
+         dermatologist.getSchedule().add(oldSchedule);
+      }
+
       // make a array to store the dermatologist list
       List<String> availableSchedules = dermatologist.getSchedule();
 
@@ -279,15 +337,37 @@ public class Main {
       }
 
       // Retrieve the selected schedule
+      // then split it to make variables to update the new date and time range
       String selectedSchedule = availableSchedules.get(scheduleChoiceToUpdate - 1);
       String[] scheduleParts = selectedSchedule.split(" ");
       String newDate = scheduleParts[0];
       String newTimeRange = scheduleParts[1] + " . " + scheduleParts[3];
 
+      // condition for check if the selected schedule already has an appointment
+
+      // Generate key for new time slot for new slot
+      String newAppointmentKey = dermatologist.getName() + "|" + newDate + "|" + newTimeRange;
+
+      if (bookedSlots.contains(newAppointmentKey)) {
+         System.out.println("This is booked slot, Please select a different schedule.");
+
+         return;
+      }
+
+      // Remove the old slot from bookedSlots
+      String oldAppointmentKey = dermatologist.getName() + "|" + oldDate + "|" + oldTimeRange;
+      bookedSlots.remove(oldAppointmentKey);
+
       // Confirm and update the appointment
       System.out.println("You selected: " + newDate + " " + newTimeRange);
       appointmentToUpdate.setDate(newDate);
       appointmentToUpdate.setTime(newTimeRange);
+
+      // new slot as booked
+      bookedSlots.add(newAppointmentKey);
+
+      // Optionally, remove the selected new slot from the available schedule
+      availableSchedules.remove(scheduleChoiceToUpdate - 1);
 
       System.out.println("Appointment updated successfully to " + newDate + " at " + newTimeRange + ".");
 

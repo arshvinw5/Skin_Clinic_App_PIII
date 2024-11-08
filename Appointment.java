@@ -42,6 +42,18 @@ class Appointment {
       return dermatologist;
    }
 
+   public String getDate() {
+      return date;
+   }
+
+   public String getTime() {
+      return time;
+   }
+
+   public static double getRegFee() {
+      return Reg_Fee;
+   }
+
    public void displayAppointment() {
       String headerFormat = "| %-20s | %-30s |%n";
       String dataFormat = "| %-20s | %-30s |%n";
