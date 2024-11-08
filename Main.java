@@ -1,6 +1,8 @@
 package Skin_Clinic_App;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -84,8 +86,9 @@ public class Main {
       slots.addAll(TimeSlotGenerator.generateTimeSlots("Saturday 09:00AM - 01:00PM", timeFormatter));
 
       // Add dermatologist with 15-minute time slots
-      dermatologists.add(new Dermatologist("123456789V", "Dr Max", "maxWills@gmail.com", "0775829068", slots));
-      dermatologists.add(new Dermatologist("123456789V", "Dr Wimal", "wimalWaduge@gmail.com", "0775123456", slots));
+      dermatologists.add(new Dermatologist("123456789V", "Dr Max Wills", "maxWills@gmail.com", "0775829068", slots));
+      dermatologists
+            .add(new Dermatologist("123456789V", "Dr Wimal Waduge", "wimalWaduge@gmail.com", "0775123456", slots));
 
       // Add treatments
       treatments.add(new Treatment("Acne Treatment", 2750.00));
@@ -214,25 +217,98 @@ public class Main {
 
    // view appointments
 
+   // private static void viewAppointments() {
+   // System.out.println("Enter Patient NIC # to view appointments");
+   // String NIC = scanner.nextLine().trim();
+
+   // // to fetch the appointment by NIC from HashMap
+   // ArrayList<Appointment> patientAppointments = appointmentsByNIC.get(NIC);
+
+   // // input field validation
+   // if (patientAppointments == null || patientAppointments.isEmpty()) {
+   // System.out.println("No appointments found for entered NIC number" + NIC);
+   // return;
+   // }
+
+   // // to display appointments
+   // for (Appointment appointment : patientAppointments) {
+   // appointment.displayAppointment();
+   // System.out.println();
+   // }
+
+   // }
+
    private static void viewAppointments() {
-      System.out.println("Enter Patient NIC # to view appointments");
+      System.out.println("\n--- View Appointments ---");
+      System.out.println("1. View Appointments by NIC");
+      System.out.println("2. Filter Appointments by Date");
+      System.out.print("Choose an option (1 or 2): ");
+
+      int choice = -1;
+      while (choice != 1 && choice != 2) {
+         try {
+            choice = Integer.parseInt(scanner.nextLine().trim());
+         } catch (NumberFormatException e) {
+            System.out.println("Invalid input! Please enter 1 or 2.");
+         }
+      }
+
+      if (choice == 1) {
+         viewAppointmentsByNIC();
+      } else {
+         viewAppointmentsByDate();
+      }
+   }
+
+   // Method to view appointments by NIC
+   private static void viewAppointmentsByNIC() {
+      System.out.print("Enter Patient NIC to view appointments: ");
       String NIC = scanner.nextLine().trim();
 
-      // to fetch the appointment by NIC from HashMap
+      // Fetch the appointments by NIC from HashMap
       ArrayList<Appointment> patientAppointments = appointmentsByNIC.get(NIC);
 
-      // input field validation
+      // Check if any appointments are found
       if (patientAppointments == null || patientAppointments.isEmpty()) {
-         System.out.println("No appointments found for entered NIC number" + NIC);
+         System.out.println("No appointments found for NIC number " + NIC);
+      } else {
+         // Display the appointments
+         System.out.println("\nAppointments for NIC " + NIC + ":");
+         for (Appointment appointment : patientAppointments) {
+            appointment.displayAppointment();
+            System.out.println();
+         }
+      }
+   }
+
+   // Method to filter appointments by date
+   private static void viewAppointmentsByDate() {
+      System.out.print("Enter the date to filter appointments (format: yyyy-MM-dd): ");
+      String dateInput = scanner.nextLine().trim();
+
+      DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+      LocalDate filterDate;
+
+      try {
+         filterDate = LocalDate.parse(dateInput, dateFormatter);
+      } catch (DateTimeParseException e) {
+         System.out.println("Invalid date format! Please use the format yyyy-MM-dd.");
          return;
       }
 
-      // to display appointments
-      for (Appointment appointment : patientAppointments) {
-         appointment.displayAppointment();
-         System.out.println();
+      boolean found = false;
+      System.out.println("\nAppointments on " + dateInput + ":");
+      for (Appointment appointment : appointmentsById.values()) {
+         if (appointment.getDate().equals(filterDate.toString())) {
+            appointment.displayAppointment();
+            System.out.println();
+            found = true;
+         }
       }
 
+      if (!found) {
+         System.out.println("No appointments found for the selected date.");
+      }
    }
 
    // update appointments
